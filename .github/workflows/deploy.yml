@@ -21,7 +21,7 @@ jobs:
           port: 22
           script: |
             # 1. Masuk ke folder proyek di VPS (SESUAIKAN PATH INI!)
-            cd /root/smart-farming-backend
+            cd /ubuntu/hyperh
 
             # 2. Tarik kodingan terbaru dari GitHub
             git pull origin main
