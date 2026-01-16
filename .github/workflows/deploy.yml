@@ -1,0 +1,35 @@
+name: Deploy to VPS
+
+on:
+  push:
+    branches:
+      - main  # Action jalan setiap ada push ke branch main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: 22
+          script: |
+            # 1. Masuk ke folder proyek di VPS (SESUAIKAN PATH INI!)
+            cd /root/smart-farming-backend
+
+            # 2. Tarik kodingan terbaru dari GitHub
+            git pull origin main
+
+            # 3. Matikan container lama & Build container baru
+            # Kita pakai --build agar perubahan kodingan Python/ML terupdate
+            docker compose down
+            docker compose up -d --build
+
+            # 4. (Opsional) Hapus image sampah biar VPS gak penuh
+            docker image prune -f

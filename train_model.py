@@ -34,7 +34,7 @@ if len(df) < 10:
     print("❌ Data terlalu sedikit (<10 baris). Perbanyak data manual dulu!")
     exit()
 
-print(f"   Total Data: {len(df)} baris")
+print(f"   Total Data: {len(df)} barisk")
 
 # --- PREPROCESSING ---
 # Hapus data yang pump_status-nya aneh/kosong
