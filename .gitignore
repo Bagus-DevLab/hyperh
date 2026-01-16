@@ -1,0 +1,67 @@
+# ========================
+# SECURITY (PENTING!)
+# ========================
+# Jangan pernah upload password/credential ke GitHub
+.env
+.env.local
+secrets.h
+
+# ========================
+# PYTHON & BACKEND
+# ========================
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual Environments
+venv/
+env/
+ENV/
+.venv/
+
+# Logs
+*.log
+app/logs/
+
+# ========================
+# MACHINE LEARNING
+# ========================
+# Dataset mentah (biasanya besar dan tidak perlu di-versioning)
+*.csv
+*.xlsx
+*.json
+!app/config.json  # Kecuali config jika ada
+
+# Model ML (Opsional: Jika file .pkl > 100MB, uncomment baris bawah)
+# *.pkl
+# *.h5
+# *.pt
+
+# ========================
+# DOCKER
+# ========================
+# Jika ada file override lokal yang tidak ingin di-share
+docker-compose.override.yml
+
+# ========================
+# ESP32 / ARDUINO / PLATFORMIO
+# ========================
+# Jika pakai PlatformIO di VSCode
+.pio/
+.vscode/
+
+# Output kompilasi Arduino
+build/
+*.bin
+*.elf
+*.hex
+*.map
+
+# ========================
+# OS & EDITOR JUNK
+# ========================
+.DS_Store
+Thumbs.db
+.idea/
+*.swp
