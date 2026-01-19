@@ -5,6 +5,7 @@ import threading
 import paho.mqtt.client as mqtt
 from fastapi import FastAPI, HTTPException
 from dotenv import load_dotenv
+from datetime import datetime, timedelta # <--- TAMBAHAN 1
 
 # === ABSOLUTE IMPORTS ===
 from app.database import DBManager
@@ -101,6 +102,8 @@ def get_dashboard_data():
     # Default value (jika DB kosong)
     response = {
         "device_id": "ESP32",
+        "device_status": "OFFLINE", # <--- Default OFFLINE
+        "last_seen_seconds_ago": -1,
         "timestamp": None,
         "sensor": {"ph": 7.0, "soil_percent": 0, "soil_adc": 0},
         "pump_status": "OFF",
@@ -114,8 +117,30 @@ def get_dashboard_data():
     if latest_data:
         ph_val = float(latest_data.get('ph', 7.0))
         soil_val = int(latest_data.get('soil_percent', 0))
+        timestamp_db = latest_data.get('timestamp') # Harus format datetime object dari DB
+
+        # --- LOGIKA CEK STATUS DEVICE (ONLINE/OFFLINE) ---
+        # Jika data terakhir diterima kurang dari 60 detik yang lalu, anggap ONLINE
+        # Sesuaikan '60' dengan interval pengiriman ESP32 kamu.
         
-        response["timestamp"] = str(latest_data.get('timestamp'))
+        is_online = False
+        seconds_ago = 0
+        
+        if timestamp_db:
+            # Hitung selisih waktu sekarang dengan waktu data terakhir
+            now = datetime.now()
+            diff = now - timestamp_db
+            seconds_ago = int(diff.total_seconds())
+
+            # Ambang batas toleransi (misal 30 detik)
+            if seconds_ago < 30: 
+                is_online = True
+        
+        # -------------------------------------------------
+
+        response["device_status"] = "ONLINE" if is_online else "OFFLINE"
+        response["last_seen_seconds_ago"] = seconds_ago
+        response["timestamp"] = str(timestamp_db)
         response["device_id"] = latest_data.get('device_id')
         response["sensor"]["ph"] = ph_val
         response["sensor"]["soil_percent"] = soil_val
