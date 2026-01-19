@@ -58,3 +58,16 @@ class DBManager:
         except Exception as e:
             print(f">> [DB READ ERROR] {e}")
             return None
+        
+    def get_history(self, limit=20):
+        # Mengambil 20 data terakhir
+        try:
+            # Sesuaikan query ini dengan struktur tabel Anda
+            # Contoh query SQLite/MySQL standar
+            query = "SELECT * FROM iot_logs ORDER BY id DESC LIMIT ?"
+            self.cursor.execute(query, (limit,))
+            columns = [col[0] for col in self.cursor.description]
+            return [dict(zip(columns, row)) for row in self.cursor.fetchall()]
+        except Exception as e:
+            print(f"[DB Error] {e}")
+            return []

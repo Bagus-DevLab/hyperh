@@ -168,3 +168,9 @@ def get_dashboard_data():
         }
 
     return response
+
+@app.get("/history")
+def get_history_log():
+    # Ambil 50 data terakhir
+    data = db.get_history(limit=50)
+    return {"status": "success", "data": data}
