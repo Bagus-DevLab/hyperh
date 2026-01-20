@@ -5,9 +5,10 @@ import threading
 import paho.mqtt.client as mqtt
 from fastapi import FastAPI, HTTPException
 from dotenv import load_dotenv
-from datetime import datetime, timedelta # <--- TAMBAHAN 1
+from datetime import datetime, timedelta
 
 # === ABSOLUTE IMPORTS ===
+# Pastikan struktur folder Anda benar (app/database.py, dll)
 from app.database import DBManager
 from app.ml_engine import MLEngine
 from app.models import ControlRequest
@@ -21,7 +22,7 @@ ai = MLEngine()
 
 # Setup MQTT Config
 BROKER = os.getenv("MQTT_BROKER")
-PORT = int(os.getenv("MQTT_PORT"))
+PORT = int(os.getenv("MQTT_PORT", 1883)) # Default port 1883 jika null
 USER = os.getenv("MQTT_USER")
 PASS = os.getenv("MQTT_PASSWORD")
 TOPIC_DATA = os.getenv("MQTT_TOPIC_DATA")
@@ -51,11 +52,16 @@ def on_message(client, userdata, msg):
 
 # Inisialisasi Client
 mqtt_client = mqtt.Client()
-mqtt_client.username_pw_set(USER, PASS)
-context = ssl.create_default_context()
-context.check_hostname = False
-context.verify_mode = ssl.CERT_NONE
-mqtt_client.tls_set_context(context)
+if USER and PASS:
+    mqtt_client.username_pw_set(USER, PASS)
+
+# Konfigurasi SSL hanya jika port secure (biasanya 8883)
+if PORT == 8883:
+    context = ssl.create_default_context()
+    context.check_hostname = False
+    context.verify_mode = ssl.CERT_NONE
+    mqtt_client.tls_set_context(context)
+
 mqtt_client.on_connect = on_connect
 mqtt_client.on_message = on_message
 
@@ -75,7 +81,7 @@ def startup_event():
 
 # --- ENDPOINTS API ---
 
-@app.get("/")
+@app.get("/")   
 def index():
     return {"status": "System Online", "db": "Connected"}
 
@@ -94,7 +100,7 @@ def control_pump(req: ControlRequest):
     
     return {"status": "sent", "action": action}
 
-# === ENDPOINT BARU: DASHBOARD ===
+# === DASHBOARD DATA ===
 @app.get("/dashboard")
 def get_dashboard_data():
     latest_data = db.get_latest_data()
@@ -102,7 +108,7 @@ def get_dashboard_data():
     # Default value (jika DB kosong)
     response = {
         "device_id": "ESP32",
-        "device_status": "OFFLINE", # <--- Default OFFLINE
+        "device_status": "OFFLINE", 
         "last_seen_seconds_ago": -1,
         "timestamp": None,
         "sensor": {"ph": 7.0, "soil_percent": 0, "soil_adc": 0},
@@ -117,22 +123,18 @@ def get_dashboard_data():
     if latest_data:
         ph_val = float(latest_data.get('ph', 7.0))
         soil_val = int(latest_data.get('soil_percent', 0))
-        timestamp_db = latest_data.get('timestamp') # Harus format datetime object dari DB
+        timestamp_db = latest_data.get('timestamp') 
 
         # --- LOGIKA CEK STATUS DEVICE (ONLINE/OFFLINE) ---
-        # Jika data terakhir diterima kurang dari 60 detik yang lalu, anggap ONLINE
-        # Sesuaikan '60' dengan interval pengiriman ESP32 kamu.
-        
         is_online = False
         seconds_ago = 0
         
         if timestamp_db:
-            # Hitung selisih waktu sekarang dengan waktu data terakhir
             now = datetime.now()
             diff = now - timestamp_db
             seconds_ago = int(diff.total_seconds())
 
-            # Ambang batas toleransi (misal 30 detik)
+            # Ambang batas toleransi (30 detik)
             if seconds_ago < 30: 
                 is_online = True
         
@@ -140,7 +142,7 @@ def get_dashboard_data():
 
         response["device_status"] = "ONLINE" if is_online else "OFFLINE"
         response["last_seen_seconds_ago"] = seconds_ago
-        response["timestamp"] = str(timestamp_db)
+        response["timestamp"] = str(timestamp_db) if timestamp_db else None
         response["device_id"] = latest_data.get('device_id')
         response["sensor"]["ph"] = ph_val
         response["sensor"]["soil_percent"] = soil_val
@@ -169,8 +171,22 @@ def get_dashboard_data():
 
     return response
 
+# === PERBAIKAN HISTORY (Mengembalikan List Langsung) ===
 @app.get("/history")
 def get_history_log():
     # Ambil 50 data terakhir
     data = db.get_history(limit=50)
-    return {"status": "success", "data": data}
+    # PERBAIKAN: Return list langsung agar cocok dengan Flutter "json.decode(response.body) as List"
+    return data 
+
+@app.delete("/history/{log_id}")
+def delete_history_by_id(log_id: int):
+    """Menghapus data sensor berdasarkan ID."""
+    result = db.delete_log_by_id(log_id)
+    
+    if result.get("status") == "error":
+        raise HTTPException(status_code=500, detail=result.get("message"))
+    if result.get("status") == "not_found":
+        raise HTTPException(status_code=404, detail=result.get("message"))
+        
+    return result
